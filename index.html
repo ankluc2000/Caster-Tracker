@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Caster Tracker">
+<title>Caster Tracker</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; font-family: -apple-system, sans-serif; background: #f2f2f7; color: #1c1c1e; }
+  header { background: #fff; padding: 16px 20px 12px; border-bottom: 1px solid #e5e5ea; position: sticky; top: 0; z-index: 10; }
+  header h1 { margin: 0 0 12px; font-size: 22px; font-weight: 700; }
+  .stats { display: flex; gap: 8px; margin-bottom: 12px; }
+  .stat { flex: 1; background: #f2f2f7; border-radius: 10px; padding: 8px 10px; text-align: center; }
+  .stat-num { font-size: 20px; font-weight: 700; color: #1c1c1e; }
+  .stat-label { font-size: 11px; color: #8e8e93; margin-top: 1px; }
+  .progress-bar { height: 4px; background: #e5e5ea; border-radius: 2px; overflow: hidden; margin-bottom: 12px; }
+  .progress-fill { height: 100%; background: #34c759; border-radius: 2px; transition: width 0.3s; }
+  input[type=text] { width: 100%; padding: 10px 14px; border-radius: 10px; border: none; background: #f2f2f7; font-size: 16px; outline: none; }
+  .city-filters { display: flex; gap: 6px; overflow-x: auto; padding: 10px 20px; background: #fff; border-bottom: 1px solid #e5e5ea; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .city-filters::-webkit-scrollbar { display: none; }
+  .tag { padding: 5px 12px; border-radius: 99px; border: 1px solid #c7c7cc; font-size: 13px; color: #3a3a3c; background: #fff; white-space: nowrap; cursor: pointer; }
+  .tag.active { background: #1c1c1e; color: #fff; border-color: #1c1c1e; }
+  .list { padding: 0 0 40px; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 14px 20px; background: #fff; border-bottom: 1px solid #f2f2f7; cursor: pointer; min-height: 60px; }
+  .row.done { background: #fff; }
+  .cb { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #c7c7cc; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; }
+  .row.done .cb { background: #34c759; border-color: #34c759; }
+  .info { flex: 1; min-width: 0; }
+  .name { font-size: 15px; font-weight: 600; color: #1c1c1e; }
+  .row.done .name { color: #8e8e93; text-decoration: line-through; }
+  .sub { font-size: 13px; color: #8e8e93; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mail-btn { font-size: 13px; color: #007aff; text-decoration: none; padding: 6px 10px; border-radius: 8px; background: #f0f8ff; white-space: nowrap; flex-shrink: 0; }
+  .section-header { padding: 8px 20px; font-size: 12px; font-weight: 600; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.05em; background: #f2f2f7; }
+  .empty { text-align: center; padding: 60px 20px; color: #8e8e93; font-size: 15px; }
+  .reset-btn { display: block; margin: 20px auto; padding: 12px 24px; background: #fff; border: 1px solid #ff3b30; color: #ff3b30; border-radius: 10px; font-size: 15px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎬 Caster Tracker</h1>
+  <div class="stats" id="stats"></div>
+  <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+  <input type="text" id="search" placeholder="Suche nach Name, Firma, Stadt…" oninput="render()">
+</header>
+
+<div class="city-filters" id="city-filters"></div>
+<div class="list" id="list"></div>
+<button class="reset-btn" onclick="resetAll()">Alle zurücksetzen</button>
+
+<script>
+const CASTERS = [{"firma":"Die Besetzer","name":"Iris Baumüller","email":"casting@diebesetzer.de","stadt":"Berlin"},{"firma":"Boeckenhauer Casting","name":"Tina Böckenhauer","email":"info@boeckenhauercasting.de","stadt":"Berlin"},{"firma":"Buencker Casting","name":"Uwe Büncker","email":"office@buenker-casting.de","stadt":"Berlin"},{"firma":"Ana Davila Casting","name":"Ana Davila","email":"info@anadavilacasting.de","stadt":"Berlin"},{"firma":"Dihrberg Casting","name":"Anja Dihrberg","email":"casting@dihrberg.de","stadt":"Berlin"},{"firma":"Die Besetzer","name":"Katharina Göttsche","email":"katharina.goettsche@diebesetzer.de","stadt":"Berlin"},{"firma":"","name":"Sorrel Jardine","email":"mail@sorreljardine.de","stadt":"Berlin"},{"firma":"","name":"Alexandra Koknat","email":"alex.koknat@gmail.com","stadt":"Berlin"},{"firma":"Maile Casting","name":"Stephanie Maile","email":"mail@maile-casting.com","stadt":"Berlin"},{"firma":"Marquardt Casting","name":"Suse Marquardt","email":"office@susemarquardt.de","stadt":"Berlin"},{"firma":"Casting Ulrike Müller","name":"Ulrike Müller","email":"info@casting-ulrikemueller.de","stadt":"Berlin"},{"firma":"","name":"Susann Reitz","email":"info@koch-reitz.de","stadt":"Berlin"},{"firma":"","name":"Heiko Richard","email":"mail@heiko-richard.com","stadt":"Berlin"},{"firma":"","name":"Tanja Schuh","email":"contact@tanjaschuh.com","stadt":"Berlin"},{"firma":"","name":"Mai Seck","email":"mai.seck@t-online.de","stadt":"Berlin"},{"firma":"","name":"Uta Seibicke","email":"uta@seibicke-casting.de","stadt":"Berlin"},{"firma":"","name":"Charlotte Siebenrock","email":"info@charlottesiebenrock.de","stadt":"Berlin"},{"firma":"","name":"Anna Lena Slater","email":"info@annaslater.com","stadt":"Berlin"},{"firma":"Stutzky Casting","name":"Lisa Stutzky","email":"info@lizastutzkycasting.com","stadt":"Berlin"},{"firma":"Weimann Casting","name":"Sabine Weimann","email":"sabine@weimanncasting.de","stadt":"Berlin"},{"firma":"Wendland Casting","name":"Karen Wendland","email":"info@wendlandcasting.de","stadt":"Berlin"},{"firma":"Odeonfilm Besetzung","name":"Dorothee Weyers","email":"weyers@odeonfilm.de","stadt":"Berlin"},{"firma":"","name":"Natascha Zimmermann","email":"casting@nataschazimmermann.de","stadt":"Berlin"},{"firma":"Diehle Casting","name":"Kristin Diehle","email":"contact@diehle-casting.de","stadt":"Düsseldorf"},{"firma":"","name":"Nathalie Mischel","email":"Nathalie.Mischel@hr.de","stadt":"Frankfurt"},{"firma":"Congia Casting","name":"Deborah Congia","email":"deborah@congia-casting.de","stadt":"Hamburg"},{"firma":"","name":"Silke Fintelmann","email":"silke@fintelmann.de","stadt":"Hamburg"},{"firma":"Marion Haack Casting","name":"Marion Haack","email":"info@marion-haack-casting.de","stadt":"Hamburg"},{"firma":"Kowalski Casting","name":"Anna Kowalski","email":"anna@kowalski-casting.de","stadt":"Hamburg"},{"firma":"ndF Besetzung","name":"Christine Mattner","email":"christine.mattner@ndf.de","stadt":"Hamburg"},{"firma":"Network Movie Besetzung","name":"Alice Ziemann Bahl","email":"ziemann-bahl.a@networkmovie.de","stadt":"Hamburg"},{"firma":"Network Movie Besetzung","name":"Rebecca Gerling","email":"gerling.r@networkmovie.de","stadt":"Hamburg"},{"firma":"Network Movie Besetzung","name":"Heidrun Petersen","email":"petersen.h@networkmovie.tv","stadt":"Hamburg"},{"firma":"","name":"Karimah El-Giamal","email":"kontakt@karimah-elgiamal.de","stadt":"Jena"},{"firma":"","name":"Phillis Dayanir","email":"mail@dayanir-hellwig-casting.de","stadt":"Köln"},{"firma":"","name":"Emrah Ertem","email":"office@ertem-casting.de","stadt":"Köln"},{"firma":"Network Movie Köln","name":"Dominik Klingberg","email":"casting@networkmovie.de","stadt":"Köln"},{"firma":"","name":"Susanne Ritter","email":"info@ritter-casting.de","stadt":"Köln"},{"firma":"","name":"Marc Schötteldreier","email":"casting@mscasting.de","stadt":"Köln"},{"firma":"Network Movie Köln","name":"Sandra Köppe","email":"koeppe.s@networkmovie.de","stadt":"Köln"},{"firma":"","name":"Sabine Schwedhelm","email":"sabine@filmcastinfo.de","stadt":"Köln"},{"firma":"","name":"Katharina Krischker","email":"katharina@juno-casting.de","stadt":"Leipzig"},{"firma":"","name":"Cornelia Mareth","email":"mareth@cmr-casting.de","stadt":"Leipzig"},{"firma":"","name":"Ines Rahn","email":"ines.rahn@saxonia-media.de","stadt":"Leipzig"},{"firma":"","name":"Maria Rölcke","email":"roelcke@cmr-casting.de","stadt":"Leipzig"},{"firma":"","name":"Michael Ludwig","email":"ludwig.mi@zdf.de","stadt":"Mainz"},{"firma":"Aigner Casting","name":"Franziska Aigner","email":"mail@franziska-aigner-casting.de","stadt":"München"},{"firma":"","name":"Lore Blössl","email":"lb@tv60film.de","stadt":"München"},{"firma":"Braker Casting","name":"An Dorthe Braker","email":"andorthe@braker.de","stadt":"München"},{"firma":"","name":"Cornelia von Braun","email":"cornelia@von-braun.de","stadt":"München"},{"firma":"Agentur Isarperlen","name":"Petra Geidobler","email":"info@agentur-isarperlen.de","stadt":"München"},{"firma":"","name":"Anne Hünseler","email":"anne.hue@gmx.de","stadt":"München"},{"firma":"Die Annas Casting","name":"Anna Kulzinger","email":"casting@dieannas.com","stadt":"München"},{"firma":"","name":"Nessie Nesslauer","email":"mail@nesslauer-casting.de","stadt":"München"},{"firma":"Pohlmann Casting","name":"Stefany Pohlmann","email":"orga@pohlmann-casting.de","stadt":"München"},{"firma":"Die Annas Casting","name":"Anna Isabelle Schmidt","email":"casting@dieannas.com","stadt":"München"},{"firma":"Dreamteam Munich","name":"Stephen Sikder","email":"Stephen.Sikder@dreamteammunich.de","stadt":"München"},{"firma":"Tolkien Casting","name":"Daniela Tolkien","email":"info@tolkien-casting.de","stadt":"München"},{"firma":"Bavaria Fiction Besetzungsbüro","name":"Siegfried Wagner","email":"Siegfried.wagner@bavaria-film.de","stadt":"München"},{"firma":"Bavaria Fiction Besetzungsbüro","name":"Till Zink","email":"Till.Zink@Bavaria-Fiction.de","stadt":"München"},{"firma":"Supremecast","name":"Bärbel Bodeux","email":"contact@supremecast.de","stadt":"Münster"},{"firma":"Ufa Casting","name":"Laura Buschhagen","email":"Laura.Buschhagen@ufa.de","stadt":"Potsdam"},{"firma":"Ufa Casting","name":"Ingrid Cuenca","email":"ingrid.cuenca@ufa.de","stadt":"Potsdam"},{"firma":"","name":"Andreas Diego","email":"Diego.Andreas@ufa.de","stadt":"Potsdam"},{"firma":"","name":"Nina Haun","email":"nina.haun@ufa.de","stadt":"Potsdam"},{"firma":"","name":"Manolya Mutlu","email":"info@mm-casting.de","stadt":"Stuttgart"},{"firma":"","name":"Lorenzo Vitti","email":"lorenzo@cassandrahan.com","stadt":"Südtirol"},{"firma":"Cassandra Han Casting","name":"Cassandra Han","email":"cassandra@cassandrahan.com","stadt":"USA"},{"firma":"","name":"Anne Kathrin Heubner","email":"office@heubner-casting.de","stadt":"Weimar"},{"firma":"","name":"Lucky Englander","email":"lucky.englander@chello.at","stadt":"Wien"},{"firma":"","name":"Fritz Fleischhacker","email":"ff-casting@aon.at","stadt":"Wien"},{"firma":"","name":"Judith Limberger","email":"judith@limbergercasting.com","stadt":"Wien"},{"firma":"","name":"Lisa Oláh","email":"lisa@olah.at","stadt":"Wien"},{"firma":"","name":"Eva Roth","email":"evarothcasting@gmail.com","stadt":"Wien"},{"firma":"","name":"Rita Waszilovics","email":"westendcasting@chello.at","stadt":"Wien"},{"firma":"","name":"Corinna Glaus","email":"info@glauscasting.ch","stadt":"Zürich"},{"firma":"","name":"Ruth Hirschfeld","email":"rh@swisscasting.ch","stadt":"Zürich"},{"firma":"","name":"Anna Katharina Kugel","email":"info@die-casterei.de","stadt":""},{"firma":"Peti Misaila Casting","name":"Peti Misaila","email":"casting@petimisaila.com","stadt":""}];
+
+let done = {};
+let cityFilter = 'Alle';
+
+function load() {
+  try { done = JSON.parse(localStorage.getItem('caster-done') || '{}'); } catch(e) { done = {}; }
+  buildCityFilters();
+  render();
+}
+
+function save() {
+  try { localStorage.setItem('caster-done', JSON.stringify(done)); } catch(e) {}
+}
+
+function buildCityFilters() {
+  const cities = ['Alle', ...new Set(CASTERS.map(c => c.stadt||'—').filter(Boolean))].sort((a,b) => a==='Alle'?-1:b==='Alle'?1:a.localeCompare(b));
+  document.getElementById('city-filters').innerHTML = cities.map(c =>
+    `<span class="tag${c===cityFilter?' active':''}" onclick="setCity('${c}')">${c}</span>`
+  ).join('');
+}
+
+function setCity(c) { cityFilter = c; buildCityFilters(); render(); }
+
+function toggle(email) {
+  done[email] = !done[email];
+  save(); render();
+}
+
+function resetAll() {
+  if (!confirm('Wirklich alle zurücksetzen?')) return;
+  done = {}; save(); render();
+}
+
+function render() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const filtered = CASTERS.filter(c => {
+    const matchCity = cityFilter === 'Alle' || (c.stadt||'—') === cityFilter;
+    const matchQ = !q || c.name.toLowerCase().includes(q) || c.firma.toLowerCase().includes(q) || (c.stadt||'').toLowerCase().includes(q);
+    return matchCity && matchQ;
+  });
+
+  const total = CASTERS.length;
+  const doneCount = Object.values(done).filter(Boolean).length;
+  const pct = Math.round(doneCount/total*100);
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="stat-num">${doneCount}</div><div class="stat-label">Gesendet</div></div>
+    <div class="stat"><div class="stat-num">${total - doneCount}</div><div class="stat-label">Ausstehend</div></div>
+    <div class="stat"><div class="stat-num">${pct}%</div><div class="stat-label">Fortschritt</div></div>
+  `;
+  document.getElementById('progress').style.width = pct + '%';
+
+  const pending = filtered.filter(c => !done[c.email]);
+  const finished = filtered.filter(c => done[c.email]);
+
+  let html = '';
+  if (pending.length) {
+    html += `<div class="section-header">Ausstehend (${pending.length})</div>`;
+    html += pending.map(c => rowHTML(c)).join('');
+  }
+  if (finished.length) {
+    html += `<div class="section-header">Gesendet (${finished.length})</div>`;
+    html += finished.map(c => rowHTML(c)).join('');
+  }
+  if (!filtered.length) html = `<div class="empty">Keine Ergebnisse</div>`;
+
+  document.getElementById('list').innerHTML = html;
+}
+
+function rowHTML(c) {
+  const isDone = done[c.email];
+  return `<div class="row${isDone?' done':''}" onclick="toggle('${c.email}')">
+    <div class="cb">${isDone ? '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}</div>
+    <div class="info">
+      <div class="name">${c.name}</div>
+      <div class="sub">${[c.firma, c.stadt].filter(Boolean).join(' · ')}</div>
+    </div>
+    <a class="mail-btn" href="mailto:${c.email}" onclick="event.stopPropagation()">Mail</a>
+  </div>`;
+}
+
+load();
+</script>
+</body>
+</html>
